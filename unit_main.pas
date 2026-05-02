@@ -9,18 +9,21 @@ type
   { Обязательно добавь это определение типа перед классом }
   TLogEvent = procedure(const AMsg: string) of object;
 
-  TForumServer = class
+    TForumServer = class
   private
     FDB: TDatabaseModule;
     FNet: TForumNetwork;
     FWorker: TServerWorker;
-    FOnLog: TLogEvent; // Внутреннее поле
+    FOnLog: TLogEvent;
     procedure DoLog(const AMsg: string);
   public
     constructor Create(ADBName: string);
     procedure Start;
     procedure Stop;
-    { Вот эта строка должна быть здесь! }
+
+    // Добавляем свойства, чтобы форма могла обращаться к ним
+    property DB: TDatabaseModule read FDB;
+    property Worker: TServerWorker read FWorker;
     property OnLog: TLogEvent read FOnLog write FOnLog;
   end;
 
@@ -30,7 +33,7 @@ constructor TForumServer.Create(ADBName: string);
 begin
   FDB := TDatabaseModule.Create(ADBName); // Убедись, что здесь ADBName, а не 'forum.db'
   FNet := TForumNetwork.Create(8080);
-  FWorker := TServerWorker.Create(True);
+  FWorker := TServerWorker.Create(FDB, True);//FWorker := TServerWorker.Create(True);
 end;
 
 
