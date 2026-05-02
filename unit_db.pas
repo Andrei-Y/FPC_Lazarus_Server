@@ -81,9 +81,12 @@ begin
   FQuery.Close;
 end;
 
+
+
+
 function TDatabaseModule.LandingNode(AParentID: Integer; AContent: string): Integer;
 var
-  ParentChrono, OldTail, NewChrono, UpdatedParentChrono: string;
+  ParentChrono, OldTailID, NewChrono, UpdatedParentChrono: string;
   Parts: TStringArray;
   NewID: Integer;
 begin
@@ -91,36 +94,44 @@ begin
   if not FTran.Active then FTran.StartTransaction;
   try
     ParentChrono := GetNodeChrono(AParentID);
-    if ParentChrono = '' then ParentChrono := '0.0.0.';
+
+    // ЖЕСТКАЯ КОРРЕКЦИЯ ФОРМАТА
+    // Если там просто "0" или пусто - превращаем в стандарт "0.0.0."
+    if (ParentChrono = '0') or (ParentChrono = '') then
+      ParentChrono := '0.0.0.';
+
     Parts := ParentChrono.Split('.');
 
-    if Length(Parts) > 2 then OldTail := Parts[2] else OldTail := '0';
-    NewChrono := '0.' + OldTail + '.0.';
+    // Если всё еще мало сегментов (например, было "0.0") - добиваем до 3-х
+    if Length(Parts) < 3 then
+    begin
+       SetLength(Parts, 3);
+       if Parts[0] = '' then Parts[0] := '0';
+       if Parts[1] = '' then Parts[1] := '0';
+       if Parts[2] = '' then Parts[2] := '0';
+    end;
 
-    // 1. Вставляем узел
+    // Теперь мы УВЕРЕНЫ, что Parts[2] существует
+    OldTailID := Parts[2];
+    NewChrono := '0.' + OldTailID + '.0.';
+
+    // Вставляем новый узел
     FQuery.Close;
-    FQuery.SQL.Text := 'INSERT INTO nodes (content, chronology) VALUES (:cnt, :chr);';
+    FQuery.SQL.Text := 'INSERT INTO nodes (content, chronology) VALUES (:cnt, :chr) RETURNING id;';
     FQuery.ParamByName('cnt').AsString := AContent;
     FQuery.ParamByName('chr').AsString := NewChrono;
-    FQuery.ExecSQL;
-
-    // 2. Получаем ID (Самый надежный способ)
-    FQuery.SQL.Text := 'SELECT last_insert_rowid();';
     FQuery.Open;
     NewID := FQuery.Fields[0].AsInteger;
     FQuery.Close;
 
-    // 3. Обновляем родителя
-    if Length(Parts) > 2 then
-    begin
-      Parts[2] := IntToStr(NewID);
-      UpdatedParentChrono := string.Join('.', Parts);
+    // ОБНОВЛЯЕМ РОДИТЕЛЯ
+    Parts[2] := IntToStr(NewID); // Теперь индекс 2 точно есть
+    UpdatedParentChrono := string.Join('.', Parts);
 
-      FQuery.SQL.Text := 'UPDATE nodes SET chronology = :nc WHERE id = :id';
-      FQuery.ParamByName('nc').AsString := UpdatedParentChrono;
-      FQuery.ParamByName('id').AsInteger := AParentID;
-      FQuery.ExecSQL;
-    end;
+    FQuery.SQL.Text := 'UPDATE nodes SET chronology = :nc WHERE id = :id';
+    FQuery.ParamByName('nc').AsString := UpdatedParentChrono;
+    FQuery.ParamByName('id').AsInteger := AParentID;
+    FQuery.ExecSQL;
 
     FTran.CommitRetaining;
     Result := NewID;
@@ -128,6 +139,7 @@ begin
     on E: Exception do begin FTran.RollbackRetaining; raise; end;
   end;
 end;
+
 
 
 
@@ -165,11 +177,12 @@ begin
     // Создаем таблицы
     // 1. Nodes - Хранилище данных
     FConn.ExecuteDirect('CREATE TABLE IF NOT EXISTS nodes (' +
-      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
-      'content TEXT, ' +
-      'coords_x REAL, coords_y REAL, ' +
-      'chronology INTEGER, ' +
-      'activity_index REAL DEFAULT 0);');
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'content TEXT, ' +
+          'coords_x REAL, coords_y REAL, ' +
+          'chronology TEXT, ' +         // ТЕПЕРЬ ЭТО ТЕКСТ
+          'activity_index REAL DEFAULT 0);');
+
 
     // 2. ID_Map - Таблица переадресации (Маппинг)
     FConn.ExecuteDirect('CREATE TABLE IF NOT EXISTS id_map (' +

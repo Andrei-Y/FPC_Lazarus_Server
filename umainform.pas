@@ -14,9 +14,13 @@ type
 
   TForm1 = class(TForm)
     Button1: TButton;
+    Button2: TButton;
+    Button3: TButton;
 //    MemoLog: TMemo;
     MemoLog: TMemo; // Добавь TMemo на форму, чтобы видеть, что происходит
     procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
@@ -50,34 +54,23 @@ begin
 end;
 
 procedure TForm1.Button1Click(Sender: TObject);
-var
-  ActualHeadID: Integer;
 begin
-  Log('--- ТЕСТ ГРАВИТАЦИИ ---');
+  // Просто даем команду воркеру
+  FServer.Worker.AddMessageTask(1, 'Сообщение от ' + TimeToStr(Now));
+end;
 
-  // Вызываем наш новый метод
-  ActualHeadID := FServer.DB.CreateHead('Паспорт новой системы');
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+  // Команда на чтение
+  FServer.Worker.ExposeSystem(1);
+end;
 
-  if ActualHeadID > 0 then
-  begin
-    Log('Реальный ID Головы: ' + IntToStr(ActualHeadID));
-
-    // Приземляем к полученному ID
-    FServer.DB.LandingNode(ActualHeadID, 'Первая мысль');
-    FServer.DB.LandingNode(ActualHeadID, 'Вторая мысль');
-
-    Log('Запуск выдергивания от ID: ' + IntToStr(ActualHeadID));
-    FServer.Worker.ExposeSystem(ActualHeadID);
-  end
-  else
-    Log('Ошибка: Не удалось создать голову.');
-    if Assigned(FServer.Worker) then
-  begin
-    Log('Сигнал воркеру отправлен...');
-    FServer.Worker.ExposeSystem(ActualHeadID);
-  end
-  else
-    Log('ОШИБКА: Объект FWorker не создан!');
+procedure TForm1.Button3Click(Sender: TObject);
+begin
+  Log('--- СОЗДАНИЕ КОРНЯ ---');
+  // Используем ExecSQL для вставки ID 1
+  FServer.DB.ExecSQL('INSERT INTO nodes (id, content, chronology) VALUES (1, ''КОРЕНЬ'', ''0.0.0.'')');
+  Log('Узел №1 создан. Хроно: 0.0.0.');
 end;
 
 

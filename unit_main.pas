@@ -7,8 +7,6 @@ uses
 
 type
   { Обязательно добавь это определение типа перед классом }
-  TLogEvent = procedure(const AMsg: string) of object;
-
     TForumServer = class
   private
     FDB: TDatabaseModule;
@@ -33,8 +31,9 @@ constructor TForumServer.Create(ADBName: string);
 begin
   FDB := TDatabaseModule.Create(ADBName); // Убедись, что здесь ADBName, а не 'forum.db'
   FNet := TForumNetwork.Create(8080);
-  FWorker := TServerWorker.Create(FDB, False); // Именно False, чтобы он не "спал"
-//FWorker := TServerWorker.Create(FDB, True);//FWorker := TServerWorker.Create(True);
+  // Передаем и базу, и наш метод DoLog сервера
+  FWorker := TServerWorker.Create(FDB, @DoLog, False);
+
 end;
 
 
