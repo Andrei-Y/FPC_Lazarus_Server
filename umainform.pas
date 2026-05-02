@@ -71,6 +71,13 @@ begin
   end
   else
     Log('Ошибка: Не удалось создать голову.');
+    if Assigned(FServer.Worker) then
+  begin
+    Log('Сигнал воркеру отправлен...');
+    FServer.Worker.ExposeSystem(ActualHeadID);
+  end
+  else
+    Log('ОШИБКА: Объект FWorker не создан!');
 end;
 
 
