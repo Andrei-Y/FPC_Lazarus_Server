@@ -13,8 +13,10 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    Button1: TButton;
 //    MemoLog: TMemo;
     MemoLog: TMemo; // Добавь TMemo на форму, чтобы видеть, что происходит
+    procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
@@ -46,6 +48,33 @@ begin
       Log('ОШИБКА СТАРТА: ' + E.Message);
   end;
 end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  ActualHeadID: Integer;
+begin
+  Log('--- ТЕСТ ГРАВИТАЦИИ ---');
+
+  // Вызываем наш новый метод
+  ActualHeadID := FServer.DB.CreateHead('Паспорт новой системы');
+
+  if ActualHeadID > 0 then
+  begin
+    Log('Реальный ID Головы: ' + IntToStr(ActualHeadID));
+
+    // Приземляем к полученному ID
+    FServer.DB.LandingNode(ActualHeadID, 'Первая мысль');
+    FServer.DB.LandingNode(ActualHeadID, 'Вторая мысль');
+
+    Log('Запуск выдергивания от ID: ' + IntToStr(ActualHeadID));
+    FServer.Worker.ExposeSystem(ActualHeadID);
+  end
+  else
+    Log('Ошибка: Не удалось создать голову.');
+end;
+
+
+
 
 procedure TForm1.Log(const AMsg: string); // Добавь const и сюда!
 begin

@@ -27,9 +27,110 @@ type
     procedure GetSystemData(ARootID: Integer; AList: TList);
 
     procedure ExecuteMaintenance; // Для запуска VACUUM воркером
+      function GetTailFromDB(AID: Integer): Integer;
+      function GetNodeChronoFromDB(AID: Integer): string;
+      function LandingNode(AParentID: Integer; AContent: string): Integer;
+      function GetNodeChrono(AID: Integer): string;
+        procedure ExecSQL(const ASQL: string);
+        function CreateHead(AContent: string): Integer;
+
   end;
 
 implementation
+
+function TDatabaseModule.CreateHead(AContent: string): Integer;
+begin
+  Result := -1;
+  if not FTran.Active then FTran.StartTransaction;
+  try
+    FQuery.Close;
+    // Создаем голову с начальной хронологией Тип 1 (Голова)
+    FQuery.SQL.Text := 'INSERT INTO nodes (content, chronology) VALUES (:cnt, ''1.0.0.'') RETURNING id;';
+    FQuery.ParamByName('cnt').AsString := AContent;
+    FQuery.Open;
+    Result := FQuery.Fields[0].AsInteger;
+    FQuery.Close;
+    FTran.CommitRetaining;
+  except
+    on E: Exception do begin FTran.RollbackRetaining; raise; end;
+  end;
+end;
+
+
+procedure TDatabaseModule.ExecSQL(const ASQL: string);
+begin
+  if not FTran.Active then FTran.StartTransaction;
+  try
+    FQuery.Close;
+    FQuery.SQL.Text := ASQL;
+    FQuery.ExecSQL;
+    FTran.CommitRetaining; // Сохраняем изменения, но оставляем транзакцию живой
+  except
+    on E: Exception do begin FTran.RollbackRetaining; raise; end;
+  end;
+end;
+
+function TDatabaseModule.GetNodeChrono(AID: Integer): string;
+begin
+  Result := '';
+  FQuery.Close;
+  FQuery.SQL.Text := 'SELECT chronology FROM nodes WHERE id = :id';
+  FQuery.ParamByName('id').AsInteger := AID;
+  FQuery.Open;
+  if not FQuery.EOF then Result := FQuery.Fields[0].AsString;
+  FQuery.Close;
+end;
+
+function TDatabaseModule.LandingNode(AParentID: Integer; AContent: string): Integer;
+var
+  ParentChrono, OldTail, NewChrono, UpdatedParentChrono: string;
+  Parts: TStringArray;
+  NewID: Integer;
+begin
+  Result := -1;
+  if not FTran.Active then FTran.StartTransaction;
+  try
+    ParentChrono := GetNodeChrono(AParentID);
+    if ParentChrono = '' then ParentChrono := '0.0.0.';
+    Parts := ParentChrono.Split('.');
+
+    if Length(Parts) > 2 then OldTail := Parts[2] else OldTail := '0';
+    NewChrono := '0.' + OldTail + '.0.';
+
+    // 1. Вставляем узел
+    FQuery.Close;
+    FQuery.SQL.Text := 'INSERT INTO nodes (content, chronology) VALUES (:cnt, :chr);';
+    FQuery.ParamByName('cnt').AsString := AContent;
+    FQuery.ParamByName('chr').AsString := NewChrono;
+    FQuery.ExecSQL;
+
+    // 2. Получаем ID (Самый надежный способ)
+    FQuery.SQL.Text := 'SELECT last_insert_rowid();';
+    FQuery.Open;
+    NewID := FQuery.Fields[0].AsInteger;
+    FQuery.Close;
+
+    // 3. Обновляем родителя
+    if Length(Parts) > 2 then
+    begin
+      Parts[2] := IntToStr(NewID);
+      UpdatedParentChrono := string.Join('.', Parts);
+
+      FQuery.SQL.Text := 'UPDATE nodes SET chronology = :nc WHERE id = :id';
+      FQuery.ParamByName('nc').AsString := UpdatedParentChrono;
+      FQuery.ParamByName('id').AsInteger := AParentID;
+      FQuery.ExecSQL;
+    end;
+
+    FTran.CommitRetaining;
+    Result := NewID;
+  except
+    on E: Exception do begin FTran.RollbackRetaining; raise; end;
+  end;
+end;
+
+
+
 
 constructor TDatabaseModule.Create(ADBPath: string);
 begin
@@ -123,6 +224,34 @@ procedure TDatabaseModule.ExecuteMaintenance;
 begin
   FConn.ExecuteDirect('VACUUM;');
 end;
+
+
+ function TDatabaseModule.GetTailFromDB(AID: Integer): Integer;
+var Parts: TStringArray;
+begin
+  Result := 0;
+  // Парсим хронологию и берем второй элемент (Tail)
+  Parts := GetNodeChronoFromDB(AID).Split('.');
+  if Length(Parts) > 2 then Result := StrToIntDef(Parts[2], 0);
+end;
+
+ function TDatabaseModule.GetNodeChronoFromDB(AID: Integer): string;
+ begin
+   Result := '';
+   FQuery.Close;
+   FQuery.SQL.Text := 'SELECT chronology FROM nodes WHERE id = :id';
+   FQuery.ParamByName('id').AsInteger := AID;
+   FQuery.Open;
+
+   // ОШИБКА БЫЛА ТУТ: нужно Fields[0] или FieldByName
+   if not FQuery.EOF then
+     Result := FQuery.Fields[0].AsString;
+
+   FQuery.Close;
+ end;
+
+
+
 
 destructor TDatabaseModule.Destroy;
 begin
