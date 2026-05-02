@@ -18,8 +18,9 @@
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
-      <DestinationDirectory Value="/home/andrei-y/Documents/Lazarus/Projects/LIServer"/>
-      <UseFileFilters Value="True"/>
+      <DestinationDirectory Value="/home/andrei-y/Documents/Lazarus/Projects/LaerInternetServer1"/>
+      <CompressFinally Value="False"/>
+      <FilterSimpleSyntax Value="False"/>
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
@@ -88,4 +89,17 @@
       </Options>
     </Linking>
   </CompilerOptions>
+  <Debugging>
+    <Exceptions>
+      <Item>
+        <Name Value="EAbort"/>
+      </Item>
+      <Item>
+        <Name Value="ECodetoolError"/>
+      </Item>
+      <Item>
+        <Name Value="EFOpenError"/>
+      </Item>
+    </Exceptions>
+  </Debugging>
 </CONFIG>
