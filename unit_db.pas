@@ -93,26 +93,23 @@ begin
   Result := -1;
   if not FTran.Active then FTran.StartTransaction;
   try
+        // 1. Узнаем, кто сейчас хвост у родителя (AParentID)
     ParentChrono := GetNodeChrono(AParentID);
-
-    // ЖЕСТКАЯ КОРРЕКЦИЯ ФОРМАТА
-    // Если там просто "0" или пусто - превращаем в стандарт "0.0.0."
-    if (ParentChrono = '0') or (ParentChrono = '') then
-      ParentChrono := '0.0.0.';
-
     Parts := ParentChrono.Split('.');
 
-    // Если всё еще мало сегментов (например, было "0.0") - добиваем до 3-х
-    if Length(Parts) < 3 then
-    begin
-       SetLength(Parts, 3);
-       if Parts[0] = '' then Parts[0] := '0';
-       if Parts[1] = '' then Parts[1] := '0';
-       if Parts[2] = '' then Parts[2] := '0';
-    end;
+    if Length(Parts) > 2 then
+      OldTailID := Parts[2]
+    else
+      OldTailID := '0';
 
-    // Теперь мы УВЕРЕНЫ, что Parts[2] существует
-    OldTailID := Parts[2];
+    // ВОТ ТУТ РЕШЕНИЕ ПРОБЛЕМЫ:
+    // Если хвоста у родителя нет (0), то наш "предшественник"
+    // — это сам родитель (AParentID)
+    if OldTailID = '0' then
+       OldTailID := IntToStr(AParentID);
+
+    // Теперь NewChrono будет "0.ParentID.0", а не "0.0.0"
+    NewChrono := '0.' + OldTailID + '.0.';
     NewChrono := '0.' + OldTailID + '.0.';
 
     // Вставляем новый узел

@@ -16,6 +16,7 @@ type
     Button1: TButton;
     Button2: TButton;
     Button3: TButton;
+    EditParentID: TEdit;
 //    MemoLog: TMemo;
     MemoLog: TMemo; // Добавь TMemo на форму, чтобы видеть, что происходит
     procedure Button1Click(Sender: TObject);
@@ -54,9 +55,14 @@ begin
 end;
 
 procedure TForm1.Button1Click(Sender: TObject);
+var
+  TargetID: Integer;
 begin
-  // Просто даем команду воркеру
-  FServer.Worker.AddMessageTask(1, 'Сообщение от ' + TimeToStr(Now));
+  // Берем ID того узла, на который хотим ответить
+  TargetID := StrToIntDef(EditParentID.Text, 1);
+
+  Log('Отправляю воркеру команду приземлиться к ID: ' + IntToStr(TargetID));
+  FServer.Worker.AddMessageTask(TargetID, 'Ответ на узел ' + IntToStr(TargetID));
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
