@@ -1,131 +1,226 @@
 unit Unit_Worker;
 
-{$mode objfpc}{$H+}
-
 interface
 
 uses
   Classes, SysUtils, Unit_DB;
 
 type
+  { Переносим тип сюда, ПЕРЕД описанием класса }
+  TLogEvent = procedure(const AMsg: string) of object;
+
   TWorkerTask = (wtIdle, wtModeration, wtForecast, wtVacuum);
 
   TServerWorker = class(TThread)
+
+
   private
     FDB: TDatabaseModule;
-    FForcedTask: TWorkerTask;
+    FOnLog: TLogEvent; // Теперь компилятор знает, что это такое
+    FMsgForLog: string;
+    // ... остальное
+
     procedure DoLog(const AMsg: string);
+    procedure SyncLog;  // Метод для синхронизации
   protected
     procedure Execute; override;
   public
-    constructor Create(ADB: TDatabaseModule; CreateSuspended: boolean);
+    constructor Create(ADB: TDatabaseModule; ALogEvent: TLogEvent; CreateSuspended: boolean);
+    procedure AddMessageTask(AParentID: Integer; AContent: string);
     procedure ExposeSystem(AStartID: Integer);
+  end;
+
+  type
+  TMapNode = record
+    ID, ParentID, Level: Integer;
   end;
 
 implementation
 
-constructor TServerWorker.Create(ADB: TDatabaseModule; CreateSuspended: boolean);
+constructor TServerWorker.Create(ADB: TDatabaseModule; ALogEvent: TLogEvent; CreateSuspended: boolean);
 begin
   inherited Create(CreateSuspended);
   FDB := ADB;
+  FOnLog := ALogEvent; // Не забудь присвоить событие!
   FreeOnTerminate := True;
+end;
+
+procedure TServerWorker.AddMessageTask(AParentID: Integer; AContent: string);
+var
+  NewID: Integer;
+  CheckChrono: string;
+begin
+  // 1. Приземляем
+  NewID := FDB.LandingNode(AParentID, AContent);
+
+  if NewID > 0 then
+  begin
+    // 2. СРАЗУ ПРОВЕРЯЕМ РОДИТЕЛЯ
+    CheckChrono := FDB.GetNodeChrono(AParentID);
+
+    // 3. Докладываем в TMemo
+    DoLog('ВОРКЕР: Приземлил ID ' + IntToStr(NewID) +
+          '. У родителя ' + IntToStr(AParentID) +
+          ' Хроно теперь = "' + CheckChrono + '"');
+  end
+  else
+    DoLog('ВОРКЕР: Ошибка приземления к ID ' + IntToStr(AParentID));
+end;
+
+
+
+procedure TServerWorker.SyncLog;
+begin
+  // Вызываем событие лога, которое привязано к твоему TMemo
+  if Assigned(FOnLog) then FOnLog(FMsgForLog);
 end;
 
 procedure TServerWorker.DoLog(const AMsg: string);
 begin
-  // Просто выводим в консоль, чтобы не вызвать ошибок интерфейса
-  WriteLn('LOG: ' + AMsg);
+  FMsgForLog := AMsg;
+  // Жёсткая синхронизация: поток воркера ждёт, пока форма примет сообщение
+  Synchronize(@SyncLog);
 end;
+
+
+
 
 procedure TServerWorker.ExposeSystem(AStartID: Integer);
 var
-  CurrentID, LastID: Integer;
+  CurrentID: Integer;
   Chrono: string;
-  NodeB, NodeT: Integer; // Убедись, что эти переменные объявлены здесь!
-  StrList: TStringList;
+  NodeB, NodeT: Integer;
+  StrList, TailStack: TStringList;
 begin
+  DoLog('--- СТАРТ ФОРМИРОВАНИЯ СТРУКТУРЫ ---');
 
-
-    // САМАЯ ВАЖНАЯ ПРОВЕРКА
-  if FDB = nil then
-  begin
-    DoLog('КРИТИЧЕСКАЯ ОШИБКА: Воркер не видит FDB (базу)!');
-    Exit;
-  end;
-
-  try
-    DoLog('ВОРКЕР: Начинаю обход системы ID ' + IntToStr(AStartID));
-
-    // Тут твой код с StrList и циклом while...
-    // ...
-
-  except
-    on E: Exception do
-      DoLog('ОШИБКА В ЦИКЛЕ: ' + E.Message);
-  end;
-
-
-  DoLog('Воркер: Вхожу в систему ID ' + IntToStr(AStartID));
   CurrentID := AStartID;
-  LastID := 0;
-
-    DoLog('ВОРКЕР: Проверка головы ' + IntToStr(AStartID));
-  Chrono := FDB.GetNodeChrono(AStartID);
-  DoLog('ВОРКЕР: Получена строка: "' + Chrono + '"');
-
   StrList := TStringList.Create;
+  TailStack := TStringList.Create;
+
   try
     StrList.Delimiter := '.';
     StrList.StrictDelimiter := True;
 
-    // 1. Читаем голову
-    Chrono := FDB.GetNodeChrono(AStartID);
-    DoLog('Воркер: Хронология головы = "' + Chrono + '"');
-
-    StrList.DelimitedText := Chrono;
-    if StrList.Count > 2 then
-      CurrentID := StrToIntDef(StrList[2], 0) // Прыгаем в Хвост
-    else
-    begin
-      DoLog('Воркер: У головы нет хвоста. Выход.');
-      Exit;
-    end;
-
-    if (CurrentID = 0) or (CurrentID = AStartID) then Exit;
-
-    // 2. ЦИКЛ ВЫДЕРГИВАНИЯ
-    while (CurrentID <> 0) and (CurrentID <> AStartID) do
+    while (CurrentID <> 0) do
     begin
       Chrono := FDB.GetNodeChrono(CurrentID);
-      if Chrono = '' then Break;
-
       StrList.DelimitedText := Chrono;
       if StrList.Count < 3 then Break;
 
-      // Инициализируем те самые переменные из ошибки
-      NodeB := StrToIntDef(StrList[1], 0); // Предшественник
-      NodeT := StrToIntDef(StrList[2], 0); // Хвост
+      NodeB := StrToIntDef(StrList[1], 0);
+      NodeT := StrToIntDef(StrList[2], 0);
 
-      DoLog('Воркер: Читаю узел ' + IntToStr(CurrentID) + ' (B:'+IntToStr(NodeB)+' T:'+IntToStr(NodeT)+')');
-
-      // ПРАВИЛО: Если у узла есть хвост И мы там еще не были — НЫРЯЕМ
-      if (NodeT <> 0) and (NodeT <> LastID) then
+      // ПРОВЕРКА НА НЫРОК:
+      // Если есть хвост и мы его ЕЩЕ НЕ посещали
+      if (NodeT <> 0) and (TailStack.IndexOf(IntToStr(CurrentID)) = -1) then
       begin
-        LastID := CurrentID;
+        // СООБЩЕНИЕ ДЛЯ ХУДОЖНИКА (Начало вложенности)
+        DoLog('>>> НЫРОК В ВЕТКУ (из узла ' + IntToStr(CurrentID) + ' в хвост ' + IntToStr(NodeT) + ')');
+
+        TailStack.Add(IntToStr(CurrentID));
         CurrentID := NodeT;
-      end
-      else
-      begin
-        DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
-        LastID := CurrentID;
-        CurrentID := NodeB; // Возвращаемся к предшественнику
+        Continue;
       end;
+
+      // ФИКСАЦИЯ УЗЛА (Здесь будет формирование посылки художнику)
+      DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
+
+      // ПРОВЕРКА НА ВСПЛЫТИЕ:
+      // Если мы вернулись в узел, который был в списке — значит, ветка закончилась
+      if TailStack.IndexOf(IntToStr(CurrentID)) <> -1 then
+      begin
+         TailStack.Delete(TailStack.IndexOf(IntToStr(CurrentID)));
+
+         // СООБЩЕНИЕ ДЛЯ ХУДОЖНИКА (Конец вложенности)
+         DoLog('<<< ВСПЛЫТИЕ ИЗ ВЕТКИ (возврат в узел ' + IntToStr(CurrentID) + ')');
+      end;
+
+      CurrentID := NodeB;
+
+      if (CurrentID = AStartID) and (TailStack.Count = 0) then Break;
     end;
+
+    if (AStartID <> 0) then DoLog('ВЫДЕРНУТ УЗЕЛ (КОРЕНЬ): ' + IntToStr(AStartID));
+
   finally
     StrList.Free;
+    TailStack.Free;
   end;
-  DoLog('Воркер: Обход завершен.');
+  DoLog('--- СТРУКТУРА ЗАВЕРШЕНА ---');
 end;
+
+
+
+
+
+
+
+
+
+
+//procedure TServerWorker.ExposeSystem(AStartID: Integer);
+//var
+//  CurrentID, LastID: Integer;
+//  Chrono: string;
+//  NodeB, NodeT: Integer;
+//  StrList: TStringList;
+//begin
+//  // МАЯК 1: Вход в процедуру
+//  FDB.ExecSQL('INSERT INTO nodes (content, chronology) VALUES (''Воркер: Начал обход системы ' + IntToStr(AStartID) + ''', ''0.0.0.'')');
+//
+//  CurrentID := AStartID;
+//  LastID := 0;
+//  StrList := TStringList.Create;
+//  try
+//    StrList.Delimiter := '.';
+//    StrList.StrictDelimiter := True;
+//
+//    Chrono := FDB.GetNodeChrono(AStartID);
+//
+//    // МАЯК 2: Что прочитали из головы
+//    FDB.ExecSQL('INSERT INTO nodes (content, chronology) VALUES (''Воркер: Голова ' + IntToStr(AStartID) + ' имеет хроно ' + Chrono + ''', ''0.0.0.'')');
+//
+//    StrList.DelimitedText := Chrono;
+//    if StrList.Count > 2 then
+//      CurrentID := StrToIntDef(StrList[2], 0) // Хвост
+//    else
+//      Exit;
+//
+//    while (CurrentID <> 0) and (CurrentID <> AStartID) do
+//    begin
+//      Chrono := FDB.GetNodeChrono(CurrentID);
+//      StrList.DelimitedText := Chrono;
+//      if StrList.Count < 3 then Break;
+//
+//      NodeB := StrToIntDef(StrList[1], 0);
+//      NodeT := StrToIntDef(StrList[2], 0);
+//
+//      // МАЯК 3: Лог каждого шага в цикле
+//      FDB.ExecSQL('INSERT INTO nodes (content, chronology) VALUES (''Воркер: Читаю узел ' + IntToStr(CurrentID) + ' (B:' + IntToStr(NodeB) + ' T:' + IntToStr(NodeT) + ')'', ''0.0.0.'')');
+//
+//      if (NodeT <> 0) and (NodeT <> LastID) then
+//      begin
+//        LastID := CurrentID;
+//        CurrentID := NodeT;
+//      end
+//      else
+//      begin
+//        LastID := CurrentID;
+//        CurrentID := NodeB;
+//      end;
+//    end;
+//  finally
+//    StrList.Free;
+//  end;
+//
+//  // МАЯК 4: Конец
+//  FDB.ExecSQL('INSERT INTO nodes (content, chronology) VALUES (''Воркер: Обход завершен успешно'', ''0.0.0.'')');
+//end;
+
+
+
+
 
 
 procedure TServerWorker.Execute;
