@@ -101,7 +101,11 @@ var
   CurrentID, NodeB, NodeT, i, j, VisualLevel: Integer;
   Chrono, NodeContent, S_Open, S_Close, HTML_Row: string;
   StrList, TailStack, HTML_Acc: TStringList;
+    S_Prefix: string; // ВОТ ОНА! Добавь эту строчку
+    LastLevel: Integer;
+      LineColor: string;
 begin
+  LastLevel := 0;
   HTML_Acc := TStringList.Create;
   // Темная тема: фон #1e1e1e, текст #d4d4d4
   HTML_Acc.Add('<html><body style="font-family:sans-serif; background:#1e1e1e; color:#d4d4d4; padding:15px;">');
@@ -142,35 +146,48 @@ begin
         VisualLevel := TailStack.Count;
 
       // Защита от отрицательного уровня
+
       if VisualLevel < 0 then VisualLevel := 0;
 
       // --- ШАГ 3: ФИКСАЦИЯ И ОТРИСОВКА ---
       NodeContent := FDB.GetNodeContent(CurrentID);
       DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
 
-      S_Open := ''; S_Close := '';
+      // ФОРМИРУЕМ ПРЕФИКС (Сетка линий)
+      S_Prefix := '';
       for j := 1 to VisualLevel do
       begin
-        // Добавляем valign="top" и убираем любые зазоры в ячейке линии
-        S_Open := S_Open +
-          '<table border="0" cellspacing="0" cellpadding="0"><tr>' +
-          '<td width="20" valign="top"></td>' + // Пустой отступ
-          // Линия: убираем лишние стили, оставляем только цвет и выравнивание
-          '<td width="2" bgcolor="#4A90E2" valign="top" style="line-height:1px; font-size:1px;">&nbsp;</td>' +
-          '<td width="10" valign="top"></td>' + // Просвет
-          '<td valign="top">'; // Контентная часть
+        // Основной цвет линий — синий
+        LineColor := '#4A90E2';
 
-        S_Close := '</td></tr></table>' + S_Close;
+        if j < VisualLevel then
+          // Рисуем проходящие линии (всегда синие)
+          S_Prefix := S_Prefix + '<font color="' + LineColor + '">┃&nbsp;&nbsp;</font>'
+        else
+        begin
+          // Это крайний индикатор уровня.
+          // Если текущий уровень меньше предыдущего — значит, это "всплытие", красим в красный
+          if VisualLevel < LastLevel then
+             LineColor := '#FF0000'; // Ярко-красный для возврата
+
+          S_Prefix := S_Prefix + '<font color="' + LineColor + '">┃(' + IntToStr(VisualLevel) + ')━</font>';
+        end;
       end;
 
-      // Само сообщение
-      HTML_Row := S_Open +
-                  '<table border="0" cellpadding="8" cellspacing="0" width="100%" bgcolor="#2d2d2d" style="margin-bottom:2px;">' +
-                  '<tr><td style="border: 1px solid #3e3e3e;" valign="top">' +
-                  '<font color="#6a9955" size="1">ID: ' + IntToStr(CurrentID) + '</font><br>' +
-                  '<font color="#d4d4d4">' + NodeContent + '</font>' +
-                  '</td></tr></table>' +
-                  S_Close;
+      // Запоминаем текущий уровень для сравнения на следующем шаге цикла
+      LastLevel := VisualLevel;
+
+      // СТРОИМ КАРТОЧКУ
+      HTML_Row :=
+        '<table border="0" cellpadding="0" cellspacing="0" width="100%">' +
+        '<tr>' +
+        '<td valign="top" style="white-space:nowrap;">' + S_Prefix + '</td>' +
+        '<td width="100%" bgcolor="#2d2d2d" style="border:1px solid #3e3e3e; padding:8px;">' +
+        '<font color="#6a9955" size="1">ID: ' + IntToStr(CurrentID)  + ')</font></font><br>' +
+        '<font color="#d4d4d4">' + NodeContent + '</font>' +
+        '</td>' +
+        '</tr>' +
+        '</table><br>';
 
       HTML_Acc.Add(HTML_Row);
 
