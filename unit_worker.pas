@@ -111,35 +111,40 @@ begin
       NodeB := StrToIntDef(StrList[1], 0);
       NodeT := StrToIntDef(StrList[2], 0);
 
+      // --- ПЕРЕНЕСЛИ СЮДА: ФИКСИРУЕМ УЗЕЛ СРАЗУ ---
+      // Мы выводим его только если еще не "ныряли" из него (его нет в стеке)
+      if TailStack.IndexOf(IntToStr(CurrentID)) = -1 then
+         DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
+
       // ПРОВЕРКА НА НЫРОК:
-      // Если есть хвост и мы его ЕЩЕ НЕ посещали
       if (NodeT <> 0) and (TailStack.IndexOf(IntToStr(CurrentID)) = -1) then
       begin
-        // СООБЩЕНИЕ ДЛЯ ХУДОЖНИКА (Начало вложенности)
-        DoLog('>>> НЫРОК В ВЕТКУ (из узла ' + IntToStr(CurrentID) + ' в хвост ' + IntToStr(NodeT) + ')');
-
+        DoLog('>>> НЫРОК В ВЕТКУ (из ' + IntToStr(CurrentID) + ')');
         TailStack.Add(IntToStr(CurrentID));
         CurrentID := NodeT;
         Continue;
       end;
 
-      // ФИКСАЦИЯ УЗЛА (Здесь будет формирование посылки художнику)
-      DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
-
       // ПРОВЕРКА НА ВСПЛЫТИЕ:
-      // Если мы вернулись в узел, который был в списке — значит, ветка закончилась
       if TailStack.IndexOf(IntToStr(CurrentID)) <> -1 then
       begin
          TailStack.Delete(TailStack.IndexOf(IntToStr(CurrentID)));
-
-         // СООБЩЕНИЕ ДЛЯ ХУДОЖНИКА (Конец вложенности)
-         DoLog('<<< ВСПЛЫТИЕ ИЗ ВЕТКИ (возврат в узел ' + IntToStr(CurrentID) + ')');
+         DoLog('<<< ВСПЛЫТИЕ ИЗ ВЕТКИ (возврат в ' + IntToStr(CurrentID) + ')');
       end;
 
       CurrentID := NodeB;
 
       if (CurrentID = AStartID) and (TailStack.Count = 0) then Break;
     end;
+
+    // Корень выводим отдельно в конце, если цикл на нем завершился
+    if (AStartID <> 0) and (CurrentID = AStartID) then
+       DoLog('ВЫДЕРНУТ УЗЕЛ (КОРЕНЬ): ' + IntToStr(AStartID));
+
+
+
+
+
 
     if (AStartID <> 0) then DoLog('ВЫДЕРНУТ УЗЕЛ (КОРЕНЬ): ' + IntToStr(AStartID));
 
