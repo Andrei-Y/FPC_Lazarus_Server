@@ -17,6 +17,7 @@ type
     constructor Create(ADBPath: string);
     destructor Destroy; override;
 
+
     // Получить физический ID из постоянного (Маппинг)
     function GetPhysicalID(APermanentID: Integer): Integer;
 
@@ -31,6 +32,7 @@ type
       function GetNodeChronoFromDB(AID: Integer): string;
       function LandingNode(AParentID: Integer; AContent: string): Integer;
       function GetNodeChrono(AID: Integer): string;
+      function GetNodeContent(AID: Integer): string;
         procedure ExecSQL(const ASQL: string);
         function CreateHead(AContent: string): Integer;
 
@@ -257,6 +259,18 @@ end;
    if not FQuery.EOF then
      Result := FQuery.Fields[0].AsString;
 
+   FQuery.Close;
+ end;
+
+
+ function TDatabaseModule.GetNodeContent(AID: Integer): string;
+ begin
+   Result := '';
+   FQuery.Close;
+   FQuery.SQL.Text := 'SELECT content FROM nodes WHERE id = :id';
+   FQuery.ParamByName('id').AsInteger := AID;
+   FQuery.Open;
+   if not FQuery.EOF then Result := FQuery.Fields[0].AsString;
    FQuery.Close;
  end;
 

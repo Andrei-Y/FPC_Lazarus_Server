@@ -5,8 +5,8 @@ unit UMainForm;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  Unit_Main; // Подключаем нашего Дирижёра
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
+  IpHtml, Unit_Main; // Подключаем нашего Дирижёра
 
 type
 
@@ -17,17 +17,24 @@ type
     Button2: TButton;
     Button3: TButton;
     EditParentID: TEdit;
+    IpHtmlPanel1: TIpHtmlPanel;
+    MemoInput: TMemo;
 //    MemoLog: TMemo;
     MemoLog: TMemo; // Добавь TMemo на форму, чтобы видеть, что происходит
+    PageControl1: TPageControl;
+    TabSheet1: TTabSheet;
+    TabSheet2: TTabSheet;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure PageControl1Change(Sender: TObject);
   private
     FServer: TForumServer;
   public
     procedure Log(const AMsg: string); // Добавь CONST перед AMsg
+    procedure UpdateForumView(const AHtml: string);
   end;
 
 var
@@ -36,6 +43,12 @@ var
 implementation
 
 {$R *.lfm}
+
+procedure TForm1.UpdateForumView(const AHtml: string);
+begin
+  // Этот метод выполняется в главном потоке и обновляет панель
+  IpHtmlPanel1.SetHtmlFromStr(AHtml);
+end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
@@ -57,12 +70,24 @@ end;
 procedure TForm1.Button1Click(Sender: TObject);
 var
   TargetID: Integer;
+  UserText: string;
 begin
-  // Берем ID того узла, на который хотим ответить
   TargetID := StrToIntDef(EditParentID.Text, 1);
+  UserText := MemoInput.Text;
 
-  Log('Отправляю воркеру команду приземлиться к ID: ' + IntToStr(TargetID));
-  FServer.Worker.AddMessageTask(TargetID, 'Ответ на узел ' + IntToStr(TargetID));
+  if UserText = '' then
+  begin
+    Log('Ошибка: Нельзя отправить пустое сообщение!');
+    Exit;
+  end;
+
+  Log('Отправляю воркеру: ответ на ID ' + IntToStr(TargetID));
+
+  // Даем команду воркеру приземлить реальный текст
+  FServer.Worker.AddMessageTask(TargetID, UserText);
+
+  // Очищаем поле ввода для следующего сообщения
+  MemoInput.Clear;
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
@@ -94,6 +119,11 @@ begin
     FServer.Stop;
     FServer.Free;
   end;
+end;
+
+procedure TForm1.PageControl1Change(Sender: TObject);
+begin
+
 end;
 
 end.

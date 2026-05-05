@@ -27,14 +27,18 @@ type
 
 implementation
 
+uses UMainForm;
+
 constructor TForumServer.Create(ADBName: string);
 begin
-  FDB := TDatabaseModule.Create(ADBName); // Убедись, что здесь ADBName, а не 'forum.db'
+  FDB := TDatabaseModule.Create(ADBName);
   FNet := TForumNetwork.Create(8080);
-  // Передаем и базу, и наш метод DoLog сервера
-  FWorker := TServerWorker.Create(FDB, @DoLog, False);
 
+  // Добавляем @Form1.UpdateForumView как третий параметр.
+  // Теперь Воркер будет знать, куда отправлять HTML-код.
+  FWorker := TServerWorker.Create(FDB, @DoLog, @Form1.UpdateForumView, False);
 end;
+
 
 
 //procedure TForumServer.Start;
