@@ -9,6 +9,7 @@ type
   { Переносим тип сюда, ПЕРЕД описанием класса }
   TLogEvent = procedure(const AMsg: string) of object;
   THTMLEvent = procedure(const AHtml: string) of object; // Добавь это
+  TExtractMode = (emToViewer, emToArtist, emToNetwork);
 
   TWorkerTask = (wtIdle, wtModeration, wtForecast, wtVacuum);
 
@@ -19,6 +20,7 @@ type
     FDB: TDatabaseModule;
     FOnLog: TLogEvent; // Теперь компилятор знает, что это такое
     FMsgForLog: string;
+    FMode: TExtractMode; // Скрытое поле режима
     FOnHtml: THTMLEvent; // Ссылка на вывод HTML
     FHtmlBuffer: string; // Временный буфер
     // ... остальное
@@ -29,7 +31,7 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(ADB: TDatabaseModule; ALogEv: TLogEvent; AHtmlEv: THTMLEvent; CreateSuspended: boolean);
+    constructor Create(ADB: TDatabaseModule; ALogEv: TLogEvent; AHtmlEv: THTMLEvent; AMode: TExtractMode; CreateSuspended: boolean);
     procedure AddMessageTask(AParentID: Integer; AContent: string);
     procedure ExposeSystem(AStartID: Integer);
   end;
@@ -41,14 +43,16 @@ type
 
 implementation
 
-constructor TServerWorker.Create(ADB: TDatabaseModule; ALogEv: TLogEvent; AHtmlEv: THTMLEvent; CreateSuspended: boolean);
+constructor TServerWorker.Create(ADB: TDatabaseModule; ALogEv: TLogEvent; AHtmlEv: THTMLEvent; AMode: TExtractMode; CreateSuspended: boolean);
 begin
   inherited Create(CreateSuspended);
   FDB := ADB;
   FOnLog := ALogEv;
   FOnHtml := AHtmlEv;
+  FMode := AMode; // Запоминаем режим при создании
   FreeOnTerminate := True;
 end;
+
 
 procedure TServerWorker.SyncHtml;
 begin
@@ -150,47 +154,79 @@ begin
       if VisualLevel < 0 then VisualLevel := 0;
 
       // --- ШАГ 3: ФИКСАЦИЯ И ОТРИСОВКА ---
-      NodeContent := FDB.GetNodeContent(CurrentID);
-      DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
 
-      // ФОРМИРУЕМ ПРЕФИКС (Сетка линий)
-      S_Prefix := '';
-      for j := 1 to VisualLevel do
-      begin
-        // Основной цвет линий — синий
-        LineColor := '#4A90E2';
+    DoLog('ВЫДЕРНУТ УЗЕЛ: ' + IntToStr(CurrentID));
 
-        if j < VisualLevel then
-          // Рисуем проходящие линии (всегда синие)
-          S_Prefix := S_Prefix + '<font color="' + LineColor + '">┃&nbsp;&nbsp;</font>'
-        else
+    // Вычисляем уровень вложенности
+    if TailStack.IndexOf(IntToStr(CurrentID)) <> -1 then
+      i := TailStack.Count - 1
+    else
+      i := TailStack.Count;
+
+    if (CurrentID <> AStartID) and (i = 0) then i := 1;
+    //   LastLevel := i; // возможно понадобится где-то ещё
+    // 1. Формируем префикс (только линии и уровень)
+
+     case FMode of
+
+      emToViewer:
         begin
-          // Это крайний индикатор уровня.
-          // Если текущий уровень меньше предыдущего — значит, это "всплытие", красим в красный
-          if VisualLevel < LastLevel then
-             LineColor := '#FF0000'; // Ярко-красный для возврата
+          // Весь твой "шикарный" код отрисовки карточек переезжает сюда:
+          NodeContent := FDB.GetNodeContent(CurrentID);
 
-          S_Prefix := S_Prefix + '<font color="' + LineColor + '">┃(' + IntToStr(VisualLevel) + ')━</font>';
-        end;
+         S_Prefix := '';
+    for j := 1 to i do
+    begin
+      LineColor := '#4A90E2';
+      if (j = i) then
+      begin
+        if i < LastLevel then LineColor := '#FF0000'; // Всплытие
+        if i > LastLevel then LineColor := '#00FFFF'; // Нырок
       end;
 
-      // Запоминаем текущий уровень для сравнения на следующем шаге цикла
-      LastLevel := VisualLevel;
+      if j < i then
+        S_Prefix := S_Prefix + '<font color="#4A90E2">┃&nbsp;&nbsp;</font>'
+      else
+        S_Prefix := S_Prefix + '<font color="' + LineColor + '">┃(' + IntToStr(i) + ')━&nbsp;</font>';
+    end;
+    LastLevel := i;
 
-      // СТРОИМ КАРТОЧКУ
-      HTML_Row :=
-        '<table border="0" cellpadding="0" cellspacing="0" width="100%">' +
-        '<tr>' +
+    // 2. СТРОИМ СТРУКТУРУ: Заголовок с ID сверху, Карточка снизу
+    HTML_Row :=
+      '<table border="0" cellpadding="0" cellspacing="0" width="100%">' +
+      '<tr>' +
+        // Колонка отступа для всей конструкции
         '<td valign="top" style="white-space:nowrap;">' + S_Prefix + '</td>' +
-        '<td width="100%" bgcolor="#2d2d2d" style="border:1px solid #3e3e3e; padding:8px;">' +
-        '<font color="#6a9955" size="1">ID: ' + IntToStr(CurrentID)  + ')</font></font><br>' +
-        '<font color="#d4d4d4">' + NodeContent + '</font>' +
+        '<td width="100%">' +
+          // 2.1. Заголовок с ID (над карточкой)
+          '<font color="#6a9955" size="1">ID: ' + IntToStr(CurrentID) + '</font><br>' +
+          // 2.2. Сама карточка сообщения
+          '<table border="1" bordercolor="#00FF00" cellpadding="10" cellspacing="0" width="100%" bgcolor="#3d3d3d">' +
+          '<tr><td>' +
+            '<font color="#FFFFFF">' + NodeContent + '</font>' +
+          '</td></tr>' +
+          '</table>' +
         '</td>' +
-        '</tr>' +
-        '</table><br>';
+      '</tr>' +
+      '</table><br>';
 
-      HTML_Acc.Add(HTML_Row);
+    HTML_Acc.Add(HTML_Row);
+        end;
 
+      emToArtist:
+        begin
+          // Режим Художника: только структура
+          // Здесь мы НЕ вызываем GetNodeContent — это экономит время
+          DoLog('ПОСЫЛКА ХУДОЖНИКУ: ID ' + IntToStr(CurrentID) + ' L:' + IntToStr(VisualLevel));
+          // В будущем здесь будет: FArtist.AddPlanet(CurrentID, NodeB, VisualLevel, Chrono);
+        end;
+
+      emToNetwork:
+        begin
+          // Пока пусто, здесь будет сборка для веб-клиента
+        end;
+
+    end; // Конец case
       // --- ШАГ 4: ВСПЛЫТИЕ ---
       if TailStack.IndexOf(IntToStr(CurrentID)) <> -1 then
       begin
@@ -230,4 +266,3 @@ begin
 end;
 
 end.
-

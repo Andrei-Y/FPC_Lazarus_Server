@@ -10,7 +10,7 @@
         <UnitName Value="project1"/>
         <EditorIndex Value="1"/>
         <CursorPos Y="22"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -20,10 +20,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="UMainForm"/>
-        <TopLine Value="73"/>
-        <CursorPos X="11" Y="47"/>
+        <TopLine Value="56"/>
+        <CursorPos X="43" Y="75"/>
         <ComponentState Value="2"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit>
@@ -33,7 +33,7 @@
         <UnitName Value="Unit_Network"/>
         <EditorIndex Value="5"/>
         <CursorPos X="6"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -43,7 +43,7 @@
         <EditorIndex Value="4"/>
         <TopLine Value="252"/>
         <CursorPos X="6" Y="275"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -51,9 +51,8 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="Unit_Main"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="46"/>
-        <CursorPos Y="64"/>
-        <UsageCount Value="57"/>
+        <CursorPos X="91" Y="39"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -62,7 +61,7 @@
         <UnitName Value="Unit_Renderer"/>
         <EditorIndex Value="6"/>
         <CursorPos X="44" Y="13"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -70,10 +69,9 @@
         <UnitName Value="Unit_Worker"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="144"/>
-        <CursorPos Y="147"/>
-        <FoldState Value=" T3id04111 PBjc0k"/>
-        <UsageCount Value="29"/>
+        <TopLine Value="160"/>
+        <CursorPos Y="166"/>
+        <UsageCount Value="34"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -81,60 +79,24 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="466"/>
         <CursorPos Y="492"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit>
       <Unit>
         <Filename Value="/usr/share/lazarus/3.8.0/lcl/interfaces/gtk2/gtk2widgetset.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1126"/>
         <CursorPos Y="1152"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="8"/>
       </Unit>
       <Unit>
         <Filename Value="/usr/share/lazarus/3.8.0/lcl/interfaces/gtk2/gtk2proc.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="3361"/>
         <CursorPos Y="3382"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="8"/>
       </Unit>
     </Units>
     <JumpHistory HistoryIndex="29">
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="57" Column="49" TopLine="44"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="58" Column="49" TopLine="45"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="59" Column="49" TopLine="46"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="61" Column="49" TopLine="48"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="105" Column="3" TopLine="74"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="87" Column="52" TopLine="66"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="88" Column="52" TopLine="67"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="48" Column="3" TopLine="46"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="47" Column="3" TopLine="45"/>
-      </Position>
       <Position>
         <Filename Value="umainform.pas"/>
         <Caret Line="83" Column="19" TopLine="55"/>
@@ -218,6 +180,42 @@
       <Position>
         <Filename Value="unit_worker.pas"/>
         <Caret Line="178" TopLine="147"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="181" Column="32" TopLine="146"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="177" Column="30" TopLine="147"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="153" Column="7" TopLine="135"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="158" Column="11" TopLine="140"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="184" Column="30" TopLine="149"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="105" Column="23" TopLine="105"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="89" Column="22" TopLine="77"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_worker.pas"/>
+        <Caret Line="55" TopLine="28"/>
+      </Position>
+      <Position>
+        <Filename Value="unit_main.pas"/>
+        <Caret Line="39" Column="80" TopLine="24"/>
       </Position>
     </JumpHistory>
     <RunParams>
