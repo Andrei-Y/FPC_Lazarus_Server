@@ -36,7 +36,7 @@ begin
 
   // Добавляем @Form1.UpdateForumView как третий параметр.
   // Теперь Воркер будет знать, куда отправлять HTML-код.
-  FWorker := TServerWorker.Create(FDB, @DoLog, @Form1.UpdateForumView, False);
+  FWorker := TServerWorker.Create(FDB, @DoLog, @Form1.UpdateForumView, emToViewer, False);
 end;
 
 
