@@ -125,6 +125,8 @@ begin
 
     while (CurrentID <> 0) do
     begin
+      // --- Вот этот "датчик" ---
+  if Terminated then Exit;
       Chrono := FDB.GetNodeChrono(CurrentID);
       StrList.DelimitedText := Chrono;
       if StrList.Count < 3 then Break;

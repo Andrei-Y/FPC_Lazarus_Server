@@ -42,6 +42,7 @@ begin
   FServer.Port := APort;
   // Назначаем обработчик события при получении запроса
   FServer.OnRequest := @HandleRequest;
+    FServer.Threaded := True;
 end;
 
 procedure TForumNetwork.HandleRequest(Sender: TObject; var ARequest: TFPHTTPConnectionRequest;
@@ -56,20 +57,67 @@ end;
 
 
 { --- ПУБЛИЧНАЯ ЧАСТЬ: Для тех, кто зашел через обычный браузер --- }
+
 procedure TForumNetwork.HandlePublicWeb(var ARequest: TFPHTTPConnectionRequest;
   var AResponse: TFPHTTPConnectionResponse);
+var
+  Path: string;
 begin
   AResponse.ContentType := 'text/html; charset=utf-8';
+  Path := ARequest.PathInfo; // Путь после адреса сервера
 
-  if ARequest.PathInfo = '/' then
-    AResponse.Content := '<html><body><h1>Космическая Система Знаний</h1>' +
-                         '<p>Сервер работает. Используйте клиентское приложение для визуализации.</p></body></html>'
-  else
+  // 1. Если просят корень или индекс - отдаем главную
+  if (Path = '/') or (Path = '/index.html') then
+  begin
+
+      // Запрещаем кэш на корню
+  AResponse.SetCustomHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  AResponse.ContentType := 'text/html; charset=utf-8';
+
+    AResponse.Content := '<html><body style="font-family:sans-serif; background:#eee; padding:50px;">' +
+                         '<h1 style="color:#2c3e50;">🚀 Космическая Система Знаний</h1>' +
+                         '<p>Сервер в эфире. Эстафета хвостов готова к передаче.</p>' +
+                         '<hr><a href="/admin">Войти в админку</a> | <a href="/forum">Просмотр форума</a>' +
+                         '</body></html>';
+  end
+
+  // 2. Заглушка для будущего форума
+  else if Path = '/forum' then
+  begin
+    AResponse.Content := '<html><body><h1>Раздел Форума</h1><p>Здесь будет стриминг дерева...</p></body></html>';
+  end
+
+  // 3. Заглушка для админки
+  else if Path = '/admin' then
+  begin
+    AResponse.Content := '<html><body><h1>Панель управления</h1><p>Доступ только для админа.</p></body></html>';
+  end
+
+  // 4. Всё остальное — честная 404
+    else
   begin
     AResponse.Code := 404;
-    AResponse.Content := '<html><body>Ошибка 404: Объект не найден.</body></html>';
+    // Добавь вывод того, что РЕАЛЬНО пришло в PathInfo
+    AResponse.Content := '<html><body><h1>Ошибка 404</h1>' +
+                         '<p>Вы искали: <b>' + ARequest.PathInfo + '</b></p>' +
+                         '<p>Полный URL: <b>' + ARequest.URL + '</b></p></body></html>';
   end;
 end;
+
+//procedure TForumNetwork.HandlePublicWeb(var ARequest: TFPHTTPConnectionRequest;
+//  var AResponse: TFPHTTPConnectionResponse);
+//begin
+//  AResponse.ContentType := 'text/html; charset=utf-8';
+//
+//  if ARequest.PathInfo = '/' then
+//    AResponse.Content := '<html><body><h1>Космическая Система Знаний</h1>' +
+//                         '<p>Сервер работает. Используйте клиентское приложение для визуализации.</p></body></html>'
+//  else
+//  begin
+//    AResponse.Code := 404;
+//    AResponse.Content := '<html><body>Ошибка 404: Объект не найден.</body></html>';
+//  end;
+//end;
 
 { --- АДМИН-API: Для твоего клиентского приложения на ноутбуке --- }
 procedure TForumNetwork.HandleAdminAPI(var ARequest: TFPHTTPConnectionRequest;
@@ -106,9 +154,11 @@ end;
 
 destructor TForumNetwork.Destroy;
 begin
-  FServer.Free;
+  if FServer.Active then FServer.Active := False;
+  FServer.Free; // Уничтожение объекта гарантированно порвет все ESTABLISHED соединения
   inherited Destroy;
 end;
+
 
 end.
 

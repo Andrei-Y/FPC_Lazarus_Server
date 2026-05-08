@@ -21,6 +21,7 @@
       <DestinationDirectory Value="/home/andrei-y/Documents/Lazarus/Projects/LaerInternetServer1"/>
       <CompressFinally Value="False"/>
       <FilterSimpleSyntax Value="False"/>
+      <FileFilter Value=""/>
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
