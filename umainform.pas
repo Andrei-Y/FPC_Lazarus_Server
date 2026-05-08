@@ -27,6 +27,7 @@ type
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure PageControl1Change(Sender: TObject);
@@ -102,6 +103,18 @@ begin
   // Используем ExecSQL для вставки ID 1
   FServer.DB.ExecSQL('INSERT INTO nodes (id, content, chronology) VALUES (1, ''КОРЕНЬ'', ''0.0.0.'')');
   Log('Узел №1 создан. Хроно: 0.0.0.');
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+  //if Assigned(FServer) then
+  //begin
+  //  FServer.Stop;
+  //  // Нам не нужно делать Free здесь, достаточно Stop
+  //end;
+
+  // Ядерный вариант для Linux, если ничего не помогает:
+  Halt;
 end;
 
 
