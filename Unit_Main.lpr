@@ -26,5 +26,8 @@ begin
   Application.CreateForm(TForm1, Form1);
 
   Application.Run;
+    // --- ТО, ЧЕГО НЕ ХВАТАЛО ---
+  // Когда мы вышли из Run (закрыли окно), принудительно обрубаем всё
+  Halt(0);
 end.
 

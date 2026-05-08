@@ -263,7 +263,7 @@ procedure TServerWorker.Execute;
 begin
   while not Terminated do
   begin
-    Sleep(1000);
+    //Sleep(1000);
   end;
 end;
 

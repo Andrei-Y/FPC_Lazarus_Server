@@ -5,7 +5,7 @@ unit Unit_Network;
 interface
 
 uses
-  Classes, SysUtils, fphttpserver, fpjson, jsonparser;
+  Classes, SysUtils, fphttpserver, fpjson, jsonparser, Sockets, BaseUnix;
 
 type
   { Основной класс сетевого модуля }
@@ -43,6 +43,7 @@ begin
   // Назначаем обработчик события при получении запроса
   FServer.OnRequest := @HandleRequest;
     FServer.Threaded := True;
+      FServer.Active := False;
 end;
 
 procedure TForumNetwork.HandleRequest(Sender: TObject; var ARequest: TFPHTTPConnectionRequest;
@@ -149,7 +150,13 @@ end;
 
 procedure TForumNetwork.Stop;
 begin
-  FServer.Active := False;
+    if Assigned(FServer) then
+  begin
+    FServer.Active := False;
+    // Даем серверу команду прекратить прослушивание
+    // В некоторых версиях FPC это помогает освободить сокет немедленно
+     Sleep(100);
+  end;
 end;
 
 destructor TForumNetwork.Destroy;
