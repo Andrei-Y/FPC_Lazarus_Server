@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
-  IpHtml, Unit_Main; // Подключаем нашего Дирижёра
+  IpHtml, Unit_Main, baseunix, unix; // Подключаем нашего Дирижёра
 
 type
 
@@ -107,14 +107,17 @@ end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  //if Assigned(FServer) then
-  //begin
-  //  FServer.Stop;
-  //  // Нам не нужно делать Free здесь, достаточно Stop
-  //end;
+  if Assigned(FServer) then
+  begin
+    FServer.Stop;
+    // Нам не нужно делать Free здесь, достаточно Stop
+  end;
 
-  // Ядерный вариант для Linux, если ничего не помогает:
-  Halt;
+  //Halt;
+    // 2. РУБИМ ПИТАНИЕ (Для Linux это норма)
+  // Эта команда мгновенно посылает сигнал SIGKILL самому себе
+  // Порт 8080 освободится в ту же микросекунду
+  FpKill(GetProcessID, 9);
 end;
 
 

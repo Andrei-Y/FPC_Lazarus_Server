@@ -32,7 +32,7 @@ uses UMainForm;
 constructor TForumServer.Create(ADBName: string);
 begin
   FDB := TDatabaseModule.Create(ADBName);
-  FNet := TForumNetwork.Create(8080);
+  FNet := TForumNetwork.Create(9000);
 
   // Добавляем @Form1.UpdateForumView как третий параметр.
   // Теперь Воркер будет знать, куда отправлять HTML-код.
@@ -62,7 +62,7 @@ var
 begin
   try
     FNet.Start;
-    DoLog('Сеть запущена на порту 8080');
+    DoLog('Сеть запущена на порту 9000');
 
     FWorker.Start;
     DoLog('Фоновый воркер запущен');

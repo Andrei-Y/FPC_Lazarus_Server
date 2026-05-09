@@ -1,32 +1,42 @@
-program project1;
+program CosmicConsole;
 
 {$mode objfpc}{$H+}
 
 uses
-  {$IFDEF UNIX}
-  cthreads,
-  {$ENDIF}
-  {$IFDEF HASAMIGA}
-  athreads,
-  {$ENDIF}
-  Interfaces, // this includes the LCL widgetset
-  Forms, unit1
-  { you can add units after this };
+  {$IFDEF UNIX}cthreads, baseunix, unix,{$ENDIF}
+  SysUtils, Classes,
+  Unit_DB, Unit_Network, Unit_Worker;
 
-{$R *.res}
+var
+  FDB: TDatabaseModule;
+  FNet: TForumNetwork;
+  S: String;
 
 begin
-  RequireDerivedFormResource:=True;
-  Application.Scaled:=True;
-  Application.Initialize;
-  Application.CreateForm(TForm1, Form1);
-  Application.Run;
-    // --- ЖЕСТКОЕ ПРИЗЕМЛЕНИЕ ---
-  // Если сервер существует, гасим его активность
-  // Вместо попыток дотянуться до FServer, просто рубим всё
-  Halt(0);
+  WriteLn('=== STARTING COSMIC CORE ===');
+  try
+    // Инициализация
+    FDB := TDatabaseModule.Create('forum.db');
+    FNet := TForumNetwork.Create(8080);
 
-  // Контрольный выстрел для Linux
-  Halt(0);
+    FNet.Start; // Тут наш Threaded := True
+
+    WriteLn('Server LIVE on port 8080.');
+    WriteLn('Press ENTER to shutdown safely...');
+
+    ReadLn(S); // Консоль замирает и ждет твоего приказа
+
+    WriteLn('Stopping components...');
+    FNet.Stop; // Тут сработает наш "будильник" или FpKill
+
+    FNet.Free;
+    FDB.Free;
+
+    WriteLn('=== SYSTEM OFFLINE ===');
+  except
+    on E: Exception do
+      WriteLn('CRITICAL ERROR: ' + E.Message);
+  end;
 end.
+
 
