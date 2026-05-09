@@ -28,6 +28,7 @@ type
     procedure DoLog(const AMsg: string);
     procedure SyncLog;  // Метод для синхронизации
     procedure SyncHtml;
+    procedure Log(Msg: string);
   protected
     procedure Execute; override;
   public
@@ -42,6 +43,11 @@ type
   end;
 
 implementation
+
+procedure TServerWorker.Log(Msg: string);
+begin
+  WriteLn('[' + FormatDateTime('hh:nn:ss', Now) + '] ' + Msg);
+end;
 
 constructor TServerWorker.Create(ADB: TDatabaseModule; ALogEv: TLogEvent; AHtmlEv: THTMLEvent; AMode: TExtractMode; CreateSuspended: boolean);
 begin

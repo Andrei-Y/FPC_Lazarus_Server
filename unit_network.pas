@@ -42,7 +42,7 @@ begin
   FServer.Port := APort;
   // Назначаем обработчик события при получении запроса
   FServer.OnRequest := @HandleRequest;
-    FServer.Threaded := True;
+    FServer.Threaded := True; // Чтобы не вешать GUI
       FServer.Active := False;
 end;
 
@@ -147,22 +147,52 @@ procedure TForumNetwork.Start;
 begin
   FServer.Active := True;
 end;
+//
+//procedure TForumNetwork.Stop;
+//begin
+//    if Assigned(FServer) then
+//    begin
+//      FServer.Active := False;
+//      // В Linux принудительное уничтожение объекта лучше всего освобождает порт
+//      FreeAndNil(FServer);
+//    end;
+//end;
 
 procedure TForumNetwork.Stop;
+var
+  S: LongInt;
+  Addr: TInetSockAddr;
 begin
-    if Assigned(FServer) then
+  if not Assigned(FServer) then Exit;
+
+  // 1. Ставим флаг выключения
+  FServer.Active := False;
+
+  // 2. Делаем "пустой звонок", чтобы разбудить блокирующий Accept
+  S := fpSocket(AF_INET, SOCK_STREAM, 0);
+  if S <> -1 then
   begin
-    FServer.Active := False;
-    // Даем серверу команду прекратить прослушивание
-    // В некоторых версиях FPC это помогает освободить сокет немедленно
-     Sleep(100);
+    Addr.sin_family := AF_INET;
+    Addr.sin_port := htons(FServer.Port);
+    Addr.sin_addr.s_addr := htonl($7F000001); // 127.0.0.1 (localhost)
+
+    // Пытаемся подключиться. Сервер проснется, увидит Active=False и выйдет
+    fpConnect(S, @Addr, sizeof(Addr));
+
+    // Закрываем наше временное соединение
+    fpshutdown(S, 2);
+    CloseSocket(S);
   end;
+
+  // 3. Теперь можно спокойно удалять объект
+  FreeAndNil(FServer);
 end;
+
+
 
 destructor TForumNetwork.Destroy;
 begin
-  if FServer.Active then FServer.Active := False;
-  FServer.Free; // Уничтожение объекта гарантированно порвет все ESTABLISHED соединения
+  Stop; // Вызываем наш стоп
   inherited Destroy;
 end;
 
